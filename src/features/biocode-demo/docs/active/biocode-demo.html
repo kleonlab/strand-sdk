@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BioCode Demo (Interactive Fake CLI)</title>
+  <title>GeneLoop Demo (Interactive Fake CLI)</title>
   <style>
     /* iTerm-like chrome */
     :root { --bg:#1e1e1e; --fg:#e5e5e5; --muted:#9aa0a6; --green:#7bd88f; --yellow:#ffd866; --blue:#7aa2f7; --red:#ff616e; }
@@ -35,7 +35,7 @@
   <div class="frame">
     <div class="titlebar">
       <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
-      <div class="tabs">iTerm — BioCode Demo</div>
+      <div class="tabs">iTerm — GeneLoop Demo</div>
     </div>
     <div class="term" id="term" aria-live="polite">
       <!-- (intentionally no floating examples to keep it realistic) -->
@@ -45,7 +45,7 @@
       <!-- Prompt -->
       <div class="prompt">
         <div class="row">
-          <span class="label" id="promptLabel">macbook</span>:<span class="path">~/biocode-demo</span> $
+          <span class="label" id="promptLabel">macbook</span>:<span class="path">~/geneloop-demo</span> $
           <span id="input" class="input" contenteditable="true" spellcheck="false" aria-label="Terminal input"></span>
           <span class="cursor" id="cursor"> </span>
         </div>
@@ -65,7 +65,7 @@
     const scroll = () => term.scrollTop = term.scrollHeight;
     const add = (txt, cls='line') => { const d=document.createElement('div'); d.className=cls; d.textContent=txt; log.appendChild(d); scroll(); };
     const addHTML = (html) => { const d=document.createElement('div'); d.className='line'; d.innerHTML=html; log.appendChild(d); scroll(); };
-    const echo = (cmd) => add(`macbook:~/biocode-demo $ ${cmd}`);
+    const echo = (cmd) => add(`macbook:~/geneloop-demo $ ${cmd}`);
     const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
 
     // Simple spinner line
@@ -109,11 +109,11 @@
     function scriptDebug(arg){
       const bam = arg || 'sample.bam';
       return [
-        {type:'spin', text:'[BioCode] Scanning filesystem (cwd, neighbors)…', duration:1200, doneText:'[BioCode] Scanning filesystem… ok'},
-        {type:'spin', text:`[BioCode] Opening ${bam} (headers, flags)…`, duration:1200, doneText:'[BioCode] Detecting file type…      ok (BAM)'},
-        {type:'print', text:'[BioCode] Quick sanity checks…      ok (sorted: coordinate)', delay:500*DELAY},
-        {type:'print', text:'[BioCode] Index presence…           missing (.bai not found)', delay:700*DELAY},
-        {type:'print', text:'[BioCode] Read summary (fast scan):', delay:50},
+        {type:'spin', text:'[GeneLoop] Scanning filesystem (cwd, neighbors)…', duration:1200, doneText:'[GeneLoop] Scanning filesystem… ok'},
+        {type:'spin', text:`[GeneLoop] Opening ${bam} (headers, flags)…`, duration:1200, doneText:'[GeneLoop] Detecting file type…      ok (BAM)'},
+        {type:'print', text:'[GeneLoop] Quick sanity checks…      ok (sorted: coordinate)', delay:500*DELAY},
+        {type:'print', text:'[GeneLoop] Index presence…           missing (.bai not found)', delay:700*DELAY},
+        {type:'print', text:'[GeneLoop] Read summary (fast scan):', delay:50},
         {type:'print', text:'  - total reads: ~42,317,894'},
         {type:'print', text:'  - mapped: 97.6%   | properly paired: 95.8%'},
         {type:'print', text:'  - duplicates: 11.9% (flag-based)'},
@@ -128,15 +128,15 @@
         {type:'print', text:`  Fix: samtools index -@ 8 ${bam}`, delay:200},
         {type:'print', text:'[Issue 2] Multimapper noise (6.3%) — consider MAPQ >=10 or STAR', delay:300},
         {type:'print', text:'[Note] GC bias (coarse) — no strong deviation observed', delay:300},
-        {type:'print', text:'[BioCode] Suggested next command:'},
+        {type:'print', text:'[GeneLoop] Suggested next command:'},
         {type:'print', text:`  samtools index -@ 8 ${bam} && samtools idxstats ${bam} | head`, delay:300},
         {type:'prompt', label:'[Decision] Auto-generate fix command? [y/N]', accept:(v)=>/^y(es)?$/i.test(v), onAnswer: async (ans)=>{
           if(!/^y(es)?$/i.test(ans)){ add('Aborted.'); return; }
           add(`Running: samtools index -@ 8 ${bam}`); await spinner('  writing index…', 1500, '  writing index… done');
           add('[Index] Done: sample.bam.bai (2.1s)'); await sleep(350*DELAY);
-          add('Re-checking…'); await spinner('[BioCode] Loading index…', 900, '[BioCode] Loading index… ok');
-          add('[BioCode] Index presence…           ok'); await sleep(300*DELAY);
-          add('[BioCode] Ready for IGV / variant calling.'); await sleep(200);
+          add('Re-checking…'); await spinner('[GeneLoop] Loading index…', 900, '[GeneLoop] Loading index… ok');
+          add('[GeneLoop] Index presence…           ok'); await sleep(300*DELAY);
+          add('[GeneLoop] Ready for IGV / variant calling.'); await sleep(200);
           add('Summary');
           add(`  Root cause: Missing .bai after sort`);
           add(`  Fix applied: samtools index -@ 8 ${bam}`);
@@ -147,18 +147,18 @@
 
     function scriptGen(){
       return [
-        {type:'spin', text:'[BioCode] Parsing intent…', duration:900, doneText:'[BioCode] Parsing intent… ok'},
+        {type:'spin', text:'[GeneLoop] Parsing intent…', duration:900, doneText:'[GeneLoop] Parsing intent… ok'},
         {type:'print', text:'[Model] Reasoning: paired-end RNA‑seq; hg38; prefer bwa-mem2 for demo speed.', delay:450*DELAY},
         {type:'print', text:'[Model] Plan: emit minimal idempotent slice + environment pins.', delay:350*DELAY},
-        {type:'spin', text:'[BioCode] Resolving toolchain (bwa-mem2, samtools)…', duration:1100, doneText:'[BioCode] Toolchain… ok'},
-        {type:'print', text:'[BioCode] Emitting idempotent Snakemake slice (FASTQ ➜ BAM)', delay:350*DELAY},
+        {type:'spin', text:'[GeneLoop] Resolving toolchain (bwa-mem2, samtools)…', duration:1100, doneText:'[GeneLoop] Toolchain… ok'},
+        {type:'print', text:'[GeneLoop] Emitting idempotent Snakemake slice (FASTQ ➜ BAM)', delay:350*DELAY},
         {type:'printHTML', html:
 `# Snakefile\nrule all:\n    input: expand("results/bam/{sample}.bam.bai", sample=lambda: config['samples'])\n\nrule align_and_sort:\n    input:\n        r1="data/fastq/{sample}_R1.fastq.gz",\n        r2="data/fastq/{sample}_R2.fastq.gz",\n        ref="refs/hg38.fa"\n    output:\n        bam=temp("results/bam/{sample}.bam"),\n        bai="results/bam/{sample}.bam.bai"\n    params:\n        threads=8,\n        bwa_opts="-R '@RG\\tID:{wildcards.sample}\\tSM:{wildcards.sample}\\tPL:ILLUMINA'"\n    log: "logs/{sample}.align.log"\n    conda: "envs/aln.yaml"\n    shell:\n        r"""\n        set -eo pipefail\n        if [ ! -s {output.bam} ]; then\n          bwa-mem2 mem -t {params.threads} {params.bwa_opts} {input.ref} {input.r1} {input.r2} 2>> {log} \\| samtools view -@ {params.threads} -bS - \\| samtools sort -@ {params.threads} -o {output.bam} - 2>> {log}\n        fi\n        samtools index -@ {params.threads} {output.bam} 2>> {log}\n        """`, delay:200},
         {type:'printHTML', html:
 `# envs/aln.yaml\nname: biocode-aln\nchannels: [conda-forge, bioconda]\ndependencies:\n  - bwa-mem2=2.*\n  - samtools=1.19.*`, delay:150},
         {type:'printHTML', html:
 `# config.yaml\nsamples:\n  - sampleA\n  - sampleB`, delay:150},
-        {type:'print', text:'[BioCode] Files written: Snakefile, envs/aln.yaml, config.yaml (virtual).', delay:200*DELAY},
+        {type:'print', text:'[GeneLoop] Files written: Snakefile, envs/aln.yaml, config.yaml (virtual).', delay:200*DELAY},
         {type:'print', text:'Notes: Replace BWA-MEM2 with STAR for spliced RNA‑seq if preferred.', delay:80},
         {type:'print', text:'Idempotent: no re-run if outputs exist; index enforced.'}
       ];
@@ -166,8 +166,8 @@
 
     function scriptExplain(){
       return [
-        {type:'spin', text:'[BioCode] Loading file: legacy/fasta_parser.pl…', duration:900, doneText:'[BioCode] File loaded'},
-        {type:'print', text:'[BioCode] Goal: translate legacy Perl FASTA reader to Python (Biopython)', delay:300*DELAY},
+        {type:'spin', text:'[GeneLoop] Loading file: legacy/fasta_parser.pl…', duration:900, doneText:'[GeneLoop] File loaded'},
+        {type:'print', text:'[GeneLoop] Goal: translate legacy Perl FASTA reader to Python (Biopython)', delay:300*DELAY},
         {type:'print', text:'[Model] Reasoning: map Perl loop/regex to Biopython SeqIO; keep behavior.', delay:350*DELAY},
         {type:'print', text:'[Model] Plan: emit typed function + CLI main; stream records.', delay:300*DELAY},
         {type:'printHTML', html:
@@ -189,10 +189,10 @@
       if(busy){ add('Busy… press Enter after current action.'); return; }
       // Commands
       if(c==='clear'){ log.innerHTML=''; return; }
-      // biocode help variants
-      if(/^biocode\s+(-h|--help|-help|help)?$/i.test(c)){
-        add('BioCode CLI v0.0.0 (demo)');
-        add('Usage: biocode <command> [options]');
+      // geneloop help variants
+      if(/^geneloop\s+(-h|--help|-help|help)?$/i.test(c)){
+        add('GeneLoop CLI v0.0.0 (demo)');
+        add('Usage: geneloop <command> [options]');
         add('');
         add('Commands:');
         add('  debug <bam>              Diagnose common BAM issues; suggest fixes.');
@@ -203,18 +203,18 @@
         add('  -h, --help               Show this help.');
         add('');
         add('Examples:');
-        add('  biocode debug sample.bam');
-        add('  biocode gen "FASTQ to BAM: paired-end RNA-seq; hg38"');
-        add('  biocode explain legacy/fasta_parser.pl --target=python --library=biopython');
+        add('  geneloop debug sample.bam');
+        add('  geneloop gen "FASTQ to BAM: paired-end RNA-seq; hg38"');
+        add('  geneloop explain legacy/fasta_parser.pl --target=python --library=biopython');
         return;
       }
-      if(/^biocode\s+debug/i.test(c)){
+      if(/^geneloop\s+debug/i.test(c)){
         const m = c.match(/^biocode\s+debug\s+(\S+)/i); const bam = m?m[1]:undefined;
         await runSteps(scriptDebug(bam)); return;
       }
-      if(/^biocode\s+gen/i.test(c)){ await runSteps(scriptGen()); return; }
-      if(/^biocode\s+explain/i.test(c)){ await runSteps(scriptExplain()); return; }
-      if(/^(help)$/i.test(c)) { add('Try: biocode -help'); return; }
+      if(/^geneloop\s+gen/i.test(c)){ await runSteps(scriptGen()); return; }
+      if(/^geneloop\s+explain/i.test(c)){ await runSteps(scriptExplain()); return; }
+      if(/^(help)$/i.test(c)) { add('Try: geneloop -help'); return; }
       add('Command not found. Try "help".');
     }
 
@@ -235,7 +235,7 @@
     // Click to focus
     document.addEventListener('click', ()=> input.focus());
     // Initial hint
-    add('BioCode CLI (demo) — type "biocode -help" for commands.');
+    add('GeneLoop CLI (demo) — type "geneloop -help" for commands.');
     input.focus();
   })();
   </script>
