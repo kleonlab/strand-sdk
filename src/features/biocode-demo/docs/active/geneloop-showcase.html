@@ -107,7 +107,8 @@
   </div>
 
   <script>
-  (function(){
+  // Ensure everything runs after DOM is ready
+  document.addEventListener('DOMContentLoaded', function(){
     const themeToggle=document.getElementById('themeToggle');
     // Theme setup
     (function initTheme(){
@@ -325,7 +326,7 @@
     tabs.forEach(btn=> btn.addEventListener('click', ()=> activate(btn.dataset.panel)));
     // initial thinking animation
     activate('debug');
-  })();
+  });
   </script>
 </body>
 </html>
