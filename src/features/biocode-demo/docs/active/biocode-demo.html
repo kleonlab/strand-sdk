@@ -322,7 +322,42 @@
       if(/^geneloop\s+explain/i.test(c)){ await runSteps(scriptExplain()); return; }
       if(/^geneloop\s+refactor/i.test(c)){ await runSteps(scriptRefactor()); return; }
       if(/^(help)$/i.test(c)) { add('Try: geneloop -help'); return; }
-      add('Command not found. Try "help".');
+      // Natural language intent parser
+      const intent = inferIntent(c);
+      if(intent){
+        add(`[GeneLoop] Parsed intent → ${intent.canonical}`);
+        if(intent.kind==='debug') { await runSteps(scriptDebug(intent.arg)); return; }
+        if(intent.kind==='gen') { await runSteps(scriptGen()); return; }
+        if(intent.kind==='explain') { await runSteps(scriptExplain()); return; }
+        if(intent.kind==='refactor') { await runSteps(scriptRefactor()); return; }
+      }
+      add('Command not found. Try "geneloop -help".');
+    }
+
+    // Heuristic intent inference for natural phrases
+    function inferIntent(text){
+      const t = text.toLowerCase();
+      const fileMatch = text.match(/(\S+\.(?:bam|fastq(?:\.gz)?|fq(?:\.gz)?|fasta|fa|pl|py))/i);
+      const file = fileMatch ? fileMatch[1] : undefined;
+      const has = (...words)=> words.some(w=> t.includes(w));
+
+      // Debug if mentions debug/fix/bam/index and we have a .bam
+      if((has('debug','fix','issue','problem','index','idx','bam') && /\.bam\b/i.test(file||'')) || (has('how can i debug') && file)){
+        return {kind:'debug', arg:file||'sample.bam', canonical:`geneloop debug ${file||'sample.bam'}`};
+      }
+      // Generate pipeline intents
+      if(has('generate','make','create','pipeline','snakemake','rna-seq','rna seq','fastq to bam','starter') || /fastq\b/i.test(t)){
+        return {kind:'gen', canonical:'geneloop gen "FASTQ to BAM: paired-end RNA-seq; hg38"'};
+      }
+      // Explain legacy code intents
+      if(has('explain','what does','summarize','understand','walk me through') && file){
+        return {kind:'explain', arg:file, canonical:`geneloop explain ${file}`};
+      }
+      // Refactor intents
+      if((has('refactor','rewrite','convert','port','modernize') && file) || has('turn this into python')){
+        return {kind:'refactor', arg:file, canonical:`geneloop refactor ${file} --target=python --library=biopython`};
+      }
+      return null;
     }
 
     // Key handling (contenteditable)
