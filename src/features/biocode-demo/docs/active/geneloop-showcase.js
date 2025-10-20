@@ -35,7 +35,8 @@
     t.style.display='flex';
     const ivI = setInterval(()=>{ icon.textContent = icons[ii++%icons.length]; }, 300);
     const ivW = setInterval(()=>{ word.textContent = words[wi++%words.length]; }, 600);
-    const duration = Math.random()*1200 + 1600;
+    // Slightly slower: ~2.4s – 4.2s
+    const duration = Math.random()*1800 + 2400;
     return new Promise(resolve=>{ setTimeout(()=>{ clearInterval(ivI); clearInterval(ivW); t.style.display='none'; resolve(); }, duration); });
   }
 
@@ -46,7 +47,8 @@
     for(const ln of lines){
       const d=document.createElement('div'); d.className='line'; d.textContent=ln; out.appendChild(d);
       panel.scrollTop = panel.scrollHeight;
-      await sleep(80);
+      // Slightly slower per line for readability
+      await sleep(140);
     }
     const prompt=document.createElement('div');
     prompt.className='prompt';
@@ -56,7 +58,8 @@
 
   const scripts = {
     debug: [
-      'macbook:~/geneloop-demo $ geneloop debug sample.bam',
+      'macbook:~/geneloop-demo $ geneloop how can I debug this file? sample.bam',
+      '[GeneLoop] Parsed intent → geneloop debug sample.bam',
       '[GeneLoop] Scanning filesystem (cwd, neighbors)… ok',
       '[GeneLoop] Detecting file type…      ok (BAM)',
       '[GeneLoop] Quick sanity checks…      ok (sorted: coordinate)',
@@ -210,4 +213,3 @@
   tabs.forEach(btn=> btn.addEventListener('click', ()=> activate(btn.dataset.panel)));
   activate('debug');
 })();
-
