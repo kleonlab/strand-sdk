@@ -136,7 +136,7 @@
 
     function showThinking(panel){
       const t = panel.querySelector('.thinking');
-      if(!t) return;
+      if(!t) return Promise.resolve();
       const icon = t.querySelector('.icon');
       const word = t.querySelector('.word');
       const words = ['Parsing…','Scanning…','Weaving…','Shaping…','Tuning…','Carving…'];
@@ -146,8 +146,10 @@
       const ivI = setInterval(()=>{ icon.textContent = icons[ii++%icons.length]; }, 300);
       const ivW = setInterval(()=>{ word.textContent = words[wi++%words.length]; }, 600);
       const duration = Math.random()*1200 + 1600;
-      setTimeout(()=>{ clearInterval(ivI); clearInterval(ivW); t.style.display='none'; }, duration);
-      }
+      return new Promise(resolve=>{
+        setTimeout(()=>{ clearInterval(ivI); clearInterval(ivW); t.style.display='none'; resolve(); }, duration);
+      });
+    }
 
     // Type-out renderer: prints lines then stays
     async function typeOut(panel, lines){
@@ -314,9 +316,8 @@
       const panel = panels[name];
       panel.scrollTop=0;
       if(!played[name]){
-        showThinking(panel);
-        // wait the same duration as showThinking setTimeout upper bound
-        setTimeout(()=>{ typeOut(panel, scripts[name]); }, 1800);
+        await showThinking(panel);
+        await typeOut(panel, scripts[name]);
         played[name]=true;
       }
     }
