@@ -29,12 +29,12 @@
     if(!t) return Promise.resolve();
     const icon = t.querySelector('.icon');
     const word = t.querySelector('.word');
-    const words = ['Parsing…','Scanning…','Weaving…','Shaping…','Tuning…','Carving…'];
+    const words = []; // no rotating words; keep it minimal
     const icons = ['•','✢','✳','*','✻','✽'];
     let wi=0, ii=0;
     t.style.display='flex';
     const ivI = setInterval(()=>{ icon.textContent = icons[ii++%icons.length]; }, 300);
-    const ivW = setInterval(()=>{ word.textContent = words[wi++%words.length]; }, 600);
+    const ivW = setInterval(()=>{ word.textContent = ''; }, 600);
     // Slightly slower: ~2.4s – 4.2s
     const duration = Math.random()*1800 + 2400;
     return new Promise(resolve=>{ setTimeout(()=>{ clearInterval(ivI); clearInterval(ivW); t.style.display='none'; resolve(); }, duration); });
@@ -44,11 +44,13 @@
     const out = panel.querySelector('.output');
     out.innerHTML='';
     const sleep=(ms)=> new Promise(r=>setTimeout(r,ms));
-    for(const ln of lines){
+    for(const item of lines){
+      const ln = typeof item === 'string' ? item : (item.text || '');
       const d=document.createElement('div'); d.className='line'; d.textContent=ln; out.appendChild(d);
       panel.scrollTop = panel.scrollHeight;
       // Slightly slower per line for readability
-      await sleep(140);
+      await sleep(160);
+      if(typeof item === 'object' && item.pauseMs){ await sleep(item.pauseMs); }
     }
     const prompt=document.createElement('div');
     prompt.className='prompt';
@@ -57,8 +59,11 @@
   }
 
   const scripts = {
+    // Lead line (shown before thinking), then the rest
+    debugLead: [
+      'macbook:~/geneloop-demo $ geneloop how can I debug this file? sample.bam'
+    ],
     debug: [
-      'macbook:~/geneloop-demo $ geneloop how can I debug this file? sample.bam',
       '[GeneLoop] Parsed intent → geneloop debug sample.bam',
       '[GeneLoop] Scanning filesystem (cwd, neighbors)… ok',
       '[GeneLoop] Detecting file type…      ok (BAM)',
@@ -81,7 +86,8 @@
       '[Note] GC bias (coarse) — no strong deviation observed',
       '[GeneLoop] Suggested next command:',
       '  samtools index -@ 8 sample.bam && samtools idxstats sample.bam | head',
-      '[Decision] Auto-generate fix command? [y/N]: y',
+      { text: '[Decision] Auto-generate fix command? [y/N]:', pauseMs: 2200 },
+      { text: 'y', pauseMs: 600 },
       'Running: samtools index -@ 8 sample.bam',
       '  writing index… done',
       '[Index] Done: sample.bam.bai (2.1s)',
@@ -204,8 +210,14 @@
     const panel = panels[name];
     panel.scrollTop=0;
     if(!played[name]){
-      await showThinking(panel);
-      await typeOut(panel, scripts[name]);
+      if(name==='debug'){
+        await typeOut(panel, scripts.debugLead);
+        await showThinking(panel);
+        await typeOut(panel, scripts.debug);
+      } else {
+        await showThinking(panel);
+        await typeOut(panel, scripts[name]);
+      }
       played[name]=true;
     }
   }
