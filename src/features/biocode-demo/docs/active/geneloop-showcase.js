@@ -100,7 +100,11 @@
       '  Fix applied: samtools index -@ 8 sample.bam',
       '  Risk notes: multimappers ~6.3%; consider MAPQ filter (>=10)'
     ],
+    genLead: [
+      'macbook:~/geneloop-demo $ geneloop build me a simple rna-seq pipeline'
+    ],
     gen: [
+      '[GeneLoop] Parsed intent → geneloop gen "FASTQ to BAM: paired-end RNA-seq; hg38"',
       'macbook:~/geneloop-demo $ geneloop gen "FASTQ to BAM: paired-end RNA-seq; hg38"',
       '[GeneLoop] Parsing intent… ok',
       '[Model] Reasoning: paired-end RNA‑seq; hg38; prefer bwa-mem2 for demo speed.',
@@ -150,7 +154,11 @@
       'Notes: Replace BWA-MEM2 with STAR for spliced RNA‑seq if preferred.',
       'Idempotent: no re-run if outputs exist; index enforced.'
     ],
+    explainLead: [
+      'macbook:~/geneloop-demo $ geneloop what does this do? legacy/fasta_parser.pl'
+    ],
     explain: [
+      '[GeneLoop] Parsed intent → geneloop explain legacy/fasta_parser.pl',
       'macbook:~/geneloop-demo $ geneloop explain legacy/fasta_parser.pl',
       '[GeneLoop] Reading file: legacy/fasta_parser.pl…',
       '[Explain] Summary',
@@ -169,7 +177,11 @@
       '  - Add input validation + friendly errors.',
       '  - Add tests: empty file, multiline, odd headers. Consider streaming parser.'
     ],
+    refactorLead: [
+      'macbook:~/geneloop-demo $ geneloop can you refactor this to python? legacy/fasta_parser.pl'
+    ],
     refactor: [
+      '[GeneLoop] Parsed intent → geneloop refactor legacy/fasta_parser.pl --target=python --library=biopython',
       'macbook:~/geneloop-demo $ geneloop refactor legacy/fasta_parser.pl --target=python --library=biopython',
       'Original (Perl, excerpt):',
       '------------------------------------------------------------',
@@ -210,14 +222,10 @@
     const panel = panels[name];
     panel.scrollTop=0;
     if(!played[name]){
-      if(name==='debug'){
-        await typeOut(panel, scripts.debugLead);
-        await showThinking(panel);
-        await typeOut(panel, scripts.debug);
-      } else {
-        await showThinking(panel);
-        await typeOut(panel, scripts[name]);
-      }
+      const leadKey = name + 'Lead';
+      if(scripts[leadKey]){ await typeOut(panel, scripts[leadKey]); }
+      await showThinking(panel);
+      await typeOut(panel, scripts[name]);
       played[name]=true;
     }
   }
