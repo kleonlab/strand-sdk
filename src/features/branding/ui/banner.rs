@@ -1,10 +1,24 @@
 use std::io::Write;
+use std::borrow::Cow;
+use anyhow::Result;
+use std::fs;
 use crossterm::{queue, style::{SetForegroundColor, ResetColor, Color}, terminal, cursor};
 use supports_color::{on_cached, Stream};
 
 use crate::features::branding::theme::{palette, gradient::{self, ColorLevel}};
 
-const LOGO: &str = include_str!("../assets/logo_geneloop.txt");
+const DEFAULT_LOGO: &str = include_str!("../assets/logo_geneloop.txt");
+
+fn load_logo_text() -> Cow<'static, str> {
+    // User-provided preferred ASCII path (requested):
+    // /Users/sethmorton/Downloads/ascii-text-art (1).txt
+    // If present, use it; otherwise fall back to the baked logo.
+    let candidate = "/Users/sethmorton/Downloads/ascii-text-art (1).txt";
+    match fs::read_to_string(candidate) {
+        Ok(s) if !s.trim().is_empty() => Cow::Owned(s),
+        _ => Cow::Borrowed(DEFAULT_LOGO),
+    }
+}
 
 fn detect_level() -> ColorLevel {
     match on_cached(Stream::Stdout) {
@@ -21,13 +35,14 @@ fn center_pad(cols: u16, width: usize) -> u16 {
     if (cols as usize) > width { ((cols as usize - width) / 2) as u16 } else { 0 }
 }
 
-pub fn show_startup<W: Write>(mut w: W) -> crossterm::Result<()> {
+pub fn show_startup<W: Write>(mut w: W) -> Result<()> {
     let (cols, _) = terminal::size().unwrap_or((120, 40));
     let level = detect_level();
     let stops = palette::light_blue_stops();
 
     // Print gradient logo, centered
-    for line in LOGO.lines() {
+    let logo = load_logo_text();
+    for line in logo.lines() {
         let width = line.chars().count();
         let colors = gradient::piecewise_gradient(width.max(1), &stops);
         let pad_left = center_pad(cols, width);
@@ -54,4 +69,3 @@ pub fn show_startup<W: Write>(mut w: W) -> crossterm::Result<()> {
 
     Ok(())
 }
-
