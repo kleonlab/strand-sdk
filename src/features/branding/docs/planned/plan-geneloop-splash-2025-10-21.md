@@ -12,19 +12,22 @@
 - Configurable color on/off with robust color detection.
 - Updated README and branding strings throughout the CLI.
 
-## 3) Tech Choices (doc-backed)
-- Colors & styles: `chalk` (v5, ESM) — truecolor/hex, detection via `supportsColor` (exported by chalk). Docs confirm hex/rgb APIs and support levels.
-- ASCII art: `figlet.js` with curated font (e.g., `ANSI Shadow`, `Big`) or pre-baked ASCII string for speed. Docs confirm `textSync`, custom font loading, and font listing.
-- Gradient: Implement a tiny, local gradient utility (no external dep) to lerp from `#00FF00`→`#0000FF` across characters. Keeps footprint minimal and avoids searching for gradient libs.
+## 3) Tech Choices (Rust)
+- Terminal & colors: `crossterm` for ANSI control + RGB, with `supports-color` (Rust crate) to detect color capability (basic/256/16m).
+- Color math: `palette` crate to convert OKLCH (from demo CSS) → sRGB; compute once at startup (negligible cost) or in `build.rs`.
+- ASCII art: pre-generated (figlet/artii) and baked as a constant via `include_str!()`.
+- Layout: manual box-drawing with Unicode; avoid heavy TUI deps. Keep banner printer ≤200 LOC.
 
 References used (Context7): chalk basic/hex/rgb usage, color levels; figlet.js `textSync`, font listing and custom fonts.
 
-## 4) Architecture Placement
+## 4) Architecture Placement (Rust)
 - Feature slice: `src/features/branding/`
-  - `ui/banner.ts` — main banner composition (≤200 lines)
-  - `ui/tips.ts` — tips rendering + layout helpers (≤120 lines)
-  - `theme/colors.ts` — palette + gradient helpers (≤150 lines)
-  - `index.ts` — exported `showStartup()` for wiring in app entry
+  - `ui/banner.rs` — banner composition/printing (≤200 lines)
+  - `ui/tips.rs` — tips rendering + wrapping helpers (≤120 lines)
+  - `theme/palette.rs` — Light Mode OKLCH stops + conversion to sRGB
+  - `theme/gradient.rs` — per-char gradient across multi-stop palette
+  - `assets/logo_geneloop.txt` — baked ASCII (via `include_str!`)
+  - `mod.rs` — `pub fn show_startup<W: Write>(w: &mut W)`
   - `docs/` — plan/summary docs per AGENTS.md
 
 ## 5) Step-by-Step Plan
@@ -41,10 +44,10 @@ References used (Context7): chalk basic/hex/rgb usage, color levels; figlet.js `
    - Create `src/features/branding/` with modules listed in section 4.
    - Wire `showStartup()` into the app’s main entry before the first prompt.
 
-4. Theme + gradient utilities
-   - Implement `hexToRgb`, `lerp`, `gradientLine(text, fromHex, toHex)` and `supportsTruecolor` guards.
-   - Use your Light Mode gradient from the demo CSS as the default. We will mirror the exact CSS gradient stops (provide CSS variable names or values) and map them to per-character coloring.
-   - Keep DNA green→blue as an alternate preset.
+4. Theme + gradient utilities (Rust)
+   - Convert Light Mode OKLCH stops → sRGB using `palette`.
+   - Implement gradient over N stops (secondary→primary→accent) with piecewise linear interpolation across characters.
+   - Detect color capability using `supports_color`; truecolor → RGB; 256-color → quantize; else → monochrome fallback.
 
 5. ASCII art for "GeneLoop"
    - Pre-generate offline (figlet or artii) and bake as a constant file (no runtime figlet dependency).
@@ -52,7 +55,8 @@ References used (Context7): chalk basic/hex/rgb usage, color levels; figlet.js `
 
 6. Banner composition
    - Gradient-apply per-character across each ASCII line.
-   - Add a thin border/padding and title line. Avoid extra deps like `boxen` by composing with Unicode box-drawing chars.
+   - Add a thin border/padding and title line using Unicode box-drawing.
+   - Respect terminal width (center/clamp) via `crossterm::terminal::size`.
 
 7. Tips & prompt area
    - Print 3–5 quick tips (auth, config, help, examples); respect terminal width.
@@ -72,57 +76,135 @@ References used (Context7): chalk basic/hex/rgb usage, color levels; figlet.js `
 
 ## 6) Code Sketches (TypeScript)
 
-### theme/colors.ts
-```ts
-// src/features/branding/theme/colors.ts
-import chalk, {supportsColor} from 'chalk';
+### theme/palette.rs
+```rust
+// src/features/branding/theme/palette.rs
+use palette::{Oklch, Srgb, FromColor, IntoColor};
 
-// Light Mode gradient (demo blues) — stops come from demo CSS
-// Source CSS (light): src/features/biocode-demo/docs/active/geneloop-showcase.html
-// :root[data-theme="light"]
-//   --secondary: oklch(0.4820 0.0825 206.0615)
-//   --primary:   oklch(0.5855 0.1006 208.0245)
-//   --accent:    oklch(0.6697 0.1154 208.9445)
-// Implementation note: we will precompute sRGB hex for these three stops and paste below.
-export const LIGHT_BLUE_STOPS = [
-  /* secondary */ '#TODO_SEC_HEX',
-  /* primary   */ '#TODO_PRI_HEX',
-  /* accent    */ '#TODO_ACC_HEX',
-] as const;
+#[derive(Clone, Copy, Debug)]
+pub struct Rgb { pub r: u8, pub g: u8, pub b: u8 }
+
+// Light Mode OKLCH (from demo CSS)
+const SEC: Oklch = Oklch::new(0.4820, 0.0825, 206.0615);
+const PRI: Oklch = Oklch::new(0.5855, 0.1006, 208.0245);
+const ACC: Oklch = Oklch::new(0.6697, 0.1154, 208.9445);
+
+fn to_rgb(ok: Oklch) -> Rgb {
+    let srgb: Srgb = Srgb::from_color(ok); // gamma-encoded sRGB in [0,1]
+    let (r, g, b) = (srgb.red, srgb.green, srgb.blue);
+    Rgb { r: (r.clamp(0.0,1.0)*255.0).round() as u8,
+          g: (g.clamp(0.0,1.0)*255.0).round() as u8,
+          b: (b.clamp(0.0,1.0)*255.0).round() as u8 }
+}
+
+pub fn light_blue_stops() -> [Rgb; 3] { [to_rgb(SEC), to_rgb(PRI), to_rgb(ACC)] }
 
 // Alternate preset
-export const DNA_GRADIENT = ['#00FF00', '#0000FF'] as const;
+pub fn dna_preset() -> (Rgb, Rgb) { (Rgb{r:0,g:255,b:0}, Rgb{r:0,g:0,b:255}) }
+```
 
-export const supportsTruecolor = () => Boolean(supportsColor && supportsColor.has256 && supportsColor.has16m);
+### theme/gradient.rs
+```rust
+// src/features/branding/theme/gradient.rs
+use super::palette::Rgb;
 
-const hexToRgb = (hex: string) => {
-  const clean = hex.replace('#', '');
-  const num = parseInt(clean.length === 3
-    ? clean.split('').map((c) => c + c).join('')
-    : clean, 16);
-  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
-};
+#[derive(Clone, Copy, Debug)]
+pub enum ColorLevel { None, Ansi256, Truecolor }
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+pub fn lerp(a: f32, b: f32, t: f32) -> f32 { a + (b - a) * t }
 
-export function gradientLine(text: string, fromHex = LIGHT_BLUE_STOPS[0], toHex = LIGHT_BLUE_STOPS[LIGHT_BLUE_STOPS.length-1]): string {
-  if (!supportsTruecolor()) return chalk.green(text); // graceful fallback
-  const from = hexToRgb(fromHex);
-  const to = hexToRgb(toHex);
-  const len = Math.max(1, text.length);
-  let out = '';
-  for (let i = 0; i < text.length; i++) {
-    const t = i / (len - 1);
-    const r = Math.round(lerp(from.r, to.r, t));
-    const g = Math.round(lerp(from.g, to.g, t));
-    const b = Math.round(lerp(from.b, to.b, t));
-    out += chalk.rgb(r, g, b)(text[i]);
-  }
-  return out;
+pub fn piecewise_gradient(len: usize, stops: &[Rgb]) -> Vec<Rgb> {
+    if len == 0 || stops.is_empty() { return vec![]; }
+    if stops.len() == 1 { return vec![stops[0]; len]; }
+    let segments = stops.len() - 1;
+    let mut out = Vec::with_capacity(len);
+    for i in 0..len {
+        let p = if len>1 { i as f32 / (len as f32 - 1.0) } else { 0.0 };
+        let segf = p * segments as f32;
+        let s = segf.floor().clamp(0.0, (segments-1) as f32) as usize;
+        let t = (segf - s as f32).clamp(0.0, 1.0);
+        let a = stops[s];
+        let b = stops[s+1];
+        let r = lerp(a.r as f32, b.r as f32, t).round() as u8;
+        let g = lerp(a.g as f32, b.g as f32, t).round() as u8;
+        let bch = lerp(a.b as f32, b.b as f32, t).round() as u8;
+        out.push(Rgb{r, g, b: bch});
+    }
+    out
 }
 ```
 
-### ui/banner.ts
+### ui/banner.rs
+```rust
+// src/features/branding/ui/banner.rs
+use std::io::{Write};
+use crossterm::{queue, style::{SetForegroundColor, ResetColor, Color}, terminal};
+use supports_color::{Stream, on_cached};
+
+use crate::features::branding::theme::{palette, gradient::{piecewise_gradient, ColorLevel}};
+
+const LOGO: &str = include_str!("../assets/logo_geneloop.txt");
+
+fn detect_level() -> ColorLevel {
+    match on_cached(Stream::Stdout) {
+        Some(lvl) if lvl.has_16m => ColorLevel::Truecolor,
+        Some(lvl) if lvl.has_256 => ColorLevel::Ansi256,
+        Some(_) => ColorLevel::Ansi256,
+        None => ColorLevel::None,
+    }
+}
+
+fn rgb_to_color(c: palette::Rgb) -> Color { Color::Rgb { r: c.r, g: c.g, b: c.b } }
+
+pub fn show_startup<W: Write>(mut w: W) -> crossterm::Result<()> {
+    let (cols, _) = terminal::size().unwrap_or((120, 40));
+    let level = detect_level();
+    let stops = palette::light_blue_stops();
+
+    for line in LOGO.lines() {
+        let width = line.chars().count();
+        let colors = piecewise_gradient(width.max(1), &stops);
+        let pad_left = if (cols as usize) > width { ((cols as usize - width) / 2) as u16 } else { 0 };
+        if pad_left > 0 { queue!(w, crossterm::cursor::MoveRight(pad_left))?; }
+        for (ch, rgb) in line.chars().zip(colors.into_iter()) {
+            let color = match level { ColorLevel::Truecolor => rgb_to_color(rgb), _ => rgb_to_color(rgb) };
+            queue!(w, SetForegroundColor(color))?;
+            write!(w, "{}", ch)?;
+        }
+        queue!(w, ResetColor)?;
+        writeln!(w)?;
+    }
+
+    // Tips
+    writeln!(w)?;
+    writeln!(w, "Tips:")?;
+    writeln!(w, "  • Run geneloop auth login to authenticate")?;
+    writeln!(w, "  • Explore commands with geneloop help")?;
+    writeln!(w, "  • Configure defaults via geneloop config")?;
+    Ok(())
+}
+```
+
+### mod.rs (feature entry)
+```rust
+// src/features/branding/mod.rs
+pub mod theme { pub mod palette; pub mod gradient; }
+pub mod ui { pub mod banner; }
+```
+
+### Wiring in main
+```rust
+// src/main.rs (or the current entrypoint)
+mod features { pub mod branding; }
+
+fn main() -> anyhow::Result<()> {
+    features::branding::ui::banner::show_startup(std::io::stdout())?;
+    // continue with existing auth/config/agent init…
+    Ok(())
+}
+```
+
+### ui/banner.rs notes
 ```ts
 // src/features/branding/ui/banner.ts
 import chalk from 'chalk';
@@ -137,9 +219,8 @@ export function renderAsciiLogo(lines: string[]): string[] { return lines; }
 // Source file: /Users/sethmorton/Downloads/ascii-text-art.txt (16 lines)
 // We will paste the final content into src/features/branding/ui/logo.geneloop.ts
 // and import it here. Placeholder for now:
-const GENELOOP_ASCII = [
-  '<<PASTE_FINAL_ASCII_LINES_HERE>>'
-];
+// ASCII is embedded via include_str!("../assets/logo_geneloop.txt").
+// The file will contain the 16 lines from your provided text.
 
 export function buildBanner(): string {
   const logo = GENELOOP_ASCII.map((line) => gradientLine(line)).join('\n');
