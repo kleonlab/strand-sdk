@@ -1,12 +1,20 @@
 # Strand SDK
 
-Strand is a Python toolkit for optimizing biological sequences (proteins, DNA, RNA, antibodies) with composable reward blocks and interchangeable optimization back ends. This repository contains the in-progress open-source SDK described in `/Users/sethmorton/Desktop/codingplayground/strand/GITHUB_REPO_STRUCTURE.md` and mirrors the future GitHub layout.
+> **⚠️ Status: Work In Progress (WIP)**
+>
+> Strand is under active development. The API is **not stable** and will change significantly before v1.0.0. Use at your own risk for production workloads.
+
+Strand is a Python toolkit for optimizing biological sequences (proteins, DNA, RNA, antibodies) with composable reward blocks and interchangeable optimization backends. The SDK provides production-ready tools for sequence design and optimization with comprehensive provenance tracking.
 
 ## Status
 
-- **Phase**: Design partner preview
+- **Current Phase**: Core API development and stabilization
 - **Focus**: Establish core API primitives, reward block architecture, provenance manifests, and developer tooling
-- **Next Milestones**: Implement production-grade optimizers (CEM, CMA-ES) and publish the first API reference draft
+- **Stability**: Experimental — breaking changes may occur in minor versions
+- **Next Milestones**: 
+  - v0.2.0: Production-grade optimizers (CEM, CMA-ES)
+  - v0.3.0: Protein structure prediction integration
+  - v1.0.0: Stable API and comprehensive documentation
 
 ## Features (Planned)
 

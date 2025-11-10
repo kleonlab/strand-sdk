@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+title: Strand SDK
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Morton
+    given-names: Seth
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+repository-code: "https://github.com/sethmorton/strand-sdk"
+url: "https://github.com/sethmorton/strand-sdk"
+repository: "https://github.com/sethmorton/strand-sdk"
+license: MIT
+version: 0.1.0
+date-released: 2025-11-09
+keywords:
+  - bioinformatics
+  - protein-design
+  - sequence-optimization
+  - machine-learning
+references:
+  - type: software
+    title: "ESMFold"
+    authors:
+      - family-names: Lin
+        given-names: Zeming
+    year: 2022
+    url: "https://github.com/facebookresearch/esmfold"
+
