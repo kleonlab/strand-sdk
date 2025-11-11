@@ -1,14 +1,10 @@
 # Quick Start
 
-Get up and running with Strand SDK in 5 minutes.
+This walkthrough shows the smallest possible optimization loop using the current experimental API surface.
 
 ## Installation
 
-```bash
-pip install strand-sdk
-```
-
-Or install from source:
+Install from source so you stay on the latest pre-alpha commits:
 
 ```bash
 git clone https://github.com/sethmorton/strand-sdk.git
@@ -90,4 +86,3 @@ optimizer = Optimizer(
 - Reduce population size
 
 For more help, check the [FAQ](../faq.md).
-

@@ -134,4 +134,6 @@ dmypy.json
 *.manifest
 experiments/
 results/
+examples/output/
+benchmarks/output/
 

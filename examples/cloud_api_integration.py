@@ -9,8 +9,10 @@ from strand.rewards import RewardBlock
 
 
 def push_results(payload: Mapping[str, object]) -> None:
-    Path("artifacts").mkdir(exist_ok=True)
-    Path("artifacts/cloud_payload.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    output_dir = Path(__file__).parent / "output"
+    output_dir.mkdir(exist_ok=True)
+    output_file = output_dir / "cloud_payload.json"
+    output_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":

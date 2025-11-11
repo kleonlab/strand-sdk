@@ -1,45 +1,35 @@
 # Strand SDK Documentation
 
-Welcome to the **Strand SDK** documentation. Strand is a production-ready Python toolkit for optimizing biological sequences with composable reward blocks and interchangeable optimization backends.
+Strand is a pre-alpha Python SDK that sits between generative biology models and wet-lab programs. The toolkit focuses on search, reward composition, and manifest logging so that model proposals can be steered toward lab-ready sequences while keeping every run reproducible.
 
-## Getting Started
+## Purpose
 
-- [Installation](./getting_started.md) — Set up Strand SDK in your environment
-- [Quick Start](./tutorial/quick_start.md) — Run your first optimization
-- [Core Concepts](./tutorial/core_concepts.md) — Understand Strand's architecture
+- **Bridge models to experiments**: plug in raw sequence proposals, define objectives, and let Strand’s search stack explore sequence space under those constraints.
+- **Capture provenance by default**: manifests record model versions, reward blocks, and optimizer settings for every run.
+- **Stay modular**: adapters, optimizers, and reward blocks are meant to be swapped per vertical slice without prop drilling state across features.
 
-## Tutorials
+## What You Can Do Today
 
-- [Quick Start](./tutorial/quick_start.md) — Run your first optimization in 5 minutes
-- [Core Concepts](./tutorial/core_concepts.md) — Understand Strand's architecture and design patterns
+1. Install the SDK locally and experiment with the toy optimizers in `examples/`.
+2. Extend reward blocks with project-specific scoring logic.
+3. Inspect the manifest structure to see how optimization runs are traced.
+4. Plan adapter layers for your own generative models ahead of the design-partner release.
 
-## API Reference
+## Roadmap Snapshot
 
-- [Core API](./api_reference.md) — `Optimizer`, `Sequence`, `Results`
-- [Reward Blocks](./reward_blocks.md) — Built-in and custom rewards
-- [Optimization Methods](./optimization_methods.md) — CEM, CMA-ES, Genetic Algorithm
-- [Manifests](./manifests.md) — Experiment provenance and reproducibility
+- **Mid December 2025** – close the loop with the first design-partner optimization runs heading into wet-lab validation.
+- **Q1 2026** – tag the first open-source release of the optimization engine + manifest tooling.
+- **Q2 2026** – layer in managed cloud/on-prem packages for regulated teams.
 
-## Advanced Topics
+## Getting Around
 
-Coming soon:
-- Advanced optimization techniques
-- Performance tuning and scaling
-- Cloud and distributed computing integration
-
-For now, see [Contributing](../CONTRIBUTING.md) to help improve Strand.
-
-## FAQ
-
-See [Frequently Asked Questions](./faq.md) for common questions and troubleshooting.
-
-## Examples Repository
-
-Complete examples are available in the [`examples/`](../examples/) directory. Browse the directory for runnable code samples demonstrating various Strand SDK features and use cases.
+- [Installation + environment setup](./getting_started.md)
+- [Quick Start](./tutorial/quick_start.md) for a minimal optimization run
+- [Core Concepts](./tutorial/core_concepts.md) for the main abstractions
+- [API Reference](./api_reference.md) for module-level details
+- [Reward Blocks](./reward_blocks.md) and [Optimization Methods](./optimization_methods.md) for scoring and search internals
 
 ## Need Help?
 
-- 📖 Check the [FAQ](./faq.md)
-- 🐛 [Report a bug](https://github.com/sethmorton/strand-sdk/issues)
-- 💡 [Request a feature](https://github.com/sethmorton/strand-sdk/issues)
-- 💬 [Start a discussion](https://github.com/sethmorton/strand-sdk/discussions)
+- Consult the [FAQ](./faq.md)
+- Open an issue or discussion on GitHub if something is missing or unclear

@@ -9,6 +9,8 @@ This example shows:
 4. Saving the full provenance manifest
 """
 
+from pathlib import Path
+
 from strand import Optimizer, RewardBlock
 from strand.core.sequence import Sequence
 from strand.rewards.base import RewardContext
@@ -23,6 +25,10 @@ def custom_scorer(sequence: Sequence, context: RewardContext) -> float:
 
 def main() -> None:
     """Run the example optimization pipeline."""
+    # Create output directory
+    output_dir = Path(__file__).parent / "output"
+    output_dir.mkdir(exist_ok=True)
+
     print("🧬 Strand SDK Example Pipeline\n")  # noqa: T201
     print("=" * 60)  # noqa: T201
 
@@ -81,21 +87,21 @@ def main() -> None:
             print(f"   {rank}. {seq.tokens}")  # type: ignore[attr-defined]  # noqa: T201
             print(f"      Score: {score:.4f}")  # noqa: T201
 
-        # Export results
-        json_path = f"results_{method}.json"
-        csv_path = f"results_{method}.csv"
+        # Export results to output directory
+        json_path = output_dir / f"results_{method}.json"
+        csv_path = output_dir / f"results_{method}.csv"
         results.export_json(json_path)
         results.export_csv(csv_path)
         print("\n   📊 Exported results:")  # noqa: T201
-        print(f"      - JSON: {json_path}")  # noqa: T201
-        print(f"      - CSV: {csv_path}")  # noqa: T201
+        print(f"      - JSON: {json_path.name}")  # noqa: T201
+        print(f"      - CSV: {csv_path.name}")  # noqa: T201
 
         # Save manifest
         manifest = results.to_manifest()
         if manifest:
-            manifest_path = f"manifest_{method}.json"
+            manifest_path = output_dir / f"manifest_{method}.json"
             manifest.save(manifest_path)
-            print(f"      - Manifest: {manifest_path}")  # noqa: T201
+            print(f"      - Manifest: {manifest_path.name}")  # noqa: T201
 
     # 4. Compare results
     print("\n4️⃣  Comparing Results Across Methods")  # noqa: T201
@@ -111,7 +117,7 @@ def main() -> None:
 
     print("\n" + "=" * 60)  # noqa: T201
     print("✅ Pipeline complete!")  # noqa: T201
-    print("\nGenerated files:")  # noqa: T201
+    print(f"\nGenerated files in: {output_dir}")  # noqa: T201
     print("  - results_*.json/.csv: Ranked sequences and scores")  # noqa: T201
     print("  - manifest_*.json: Full provenance and metadata")  # noqa: T201
 
