@@ -10,7 +10,7 @@ from typing import Any
 from strand.manifests.serializers import dump_manifest, load_manifest
 
 
-@dataclass(slots=True)  # type: ignore[call-overload]
+@dataclass(slots=True)
 class Manifest:
     run_id: str
     timestamp: datetime

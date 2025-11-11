@@ -11,7 +11,7 @@ from strand.core.sequence import Sequence
 from strand.manifests import Manifest
 
 
-@dataclass(slots=True)  # type: ignore[call-overload]
+@dataclass(slots=True)
 class OptimizationResults:
     ranked_sequences: list[Sequence]
     scores: list[float]

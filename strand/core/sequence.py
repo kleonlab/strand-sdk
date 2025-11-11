@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 
-@dataclass(slots=True)  # type: ignore[call-overload]
+@dataclass(slots=True)
 class Sequence:
     """Simple immutable representation of a biological sequence."""
 

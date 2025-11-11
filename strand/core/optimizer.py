@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from strand.core.results import OptimizationResults
@@ -94,7 +94,7 @@ class Optimizer:
     def _build_manifest(self, sequences: list[Sequence], results: OptimizationResults) -> Manifest:
         return Manifest(
             run_id=str(uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             experiment=self._experiment,
             inputs={"sequences": [seq.to_dict() for seq in sequences]},
             optimizer=self._config.as_dict(),

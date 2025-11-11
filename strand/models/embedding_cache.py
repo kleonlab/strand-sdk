@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-@dataclass(slots=True)  # type: ignore[call-overload]
+@dataclass(slots=True)
 class EmbeddingCache:
     capacity: int = 512
     store: dict[str, list[float]] = field(default_factory=dict)

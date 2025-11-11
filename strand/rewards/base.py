@@ -10,7 +10,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from strand.core.sequence import Sequence
 
 
-@dataclass(slots=True)  # type: ignore[call-overload]
+@dataclass(slots=True)
 class RewardContext:
     iteration: int = 0
     metadata: Mapping[str, int | float | str] = field(default_factory=dict)
@@ -25,7 +25,7 @@ class RewardBlockProtocol(Protocol):
         """Return the weighted score for the given sequence."""
 
 
-@dataclass(slots=True)  # type: ignore[call-overload]
+@dataclass(slots=True)
 class BaseRewardBlock:
     name: str
     weight: float = 1.0
@@ -48,4 +48,4 @@ class BaseRewardBlock:
             return [self]
         if isinstance(other, list):
             return other + [self]
-        return [self, other]  # type: ignore[unreachable]
+        return [self, other]
