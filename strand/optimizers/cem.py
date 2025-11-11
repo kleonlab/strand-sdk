@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from strand.optimizers.base import BaseOptimizer
 from strand.core.sequence import Sequence
+from strand.optimizers.base import BaseOptimizer
 
 
 class CEMOptimizer(BaseOptimizer):

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Mapping
 
 
-@dataclass(slots=True)
+@dataclass(slots=True)  # type: ignore[call-overload]
 class Sequence:
     """Simple immutable representation of a biological sequence."""
 
@@ -18,7 +18,7 @@ class Sequence:
         return {
             "id": self.id,
             "tokens": self.tokens,
-            "metadata": dict(self.metadata),
+            "metadata": dict(self.metadata),  # type: ignore[dict-item]
         }
 
     def __len__(self) -> int:  # pragma: no cover - simple delegation

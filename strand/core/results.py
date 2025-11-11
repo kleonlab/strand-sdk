@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import csv
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from strand.core.sequence import Sequence
 from strand.manifests import Manifest
 
 
-@dataclass(slots=True)
+@dataclass(slots=True)  # type: ignore[call-overload]
 class OptimizationResults:
     ranked_sequences: list[Sequence]
     scores: list[float]

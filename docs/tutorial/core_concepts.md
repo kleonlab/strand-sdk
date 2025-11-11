@@ -25,11 +25,11 @@ print(seq.to_string())  # "MKTAYIAKQRQISFVKSHFSRQ"
 ```python
 from strand.rewards import RewardBlock
 
-# Combine multiple rewards
-reward = (
+# Combine multiple rewards using composition
+rewards = (
     RewardBlock.stability(weight=1.0) +
-    RewardBlock.novelty(weight=0.5, metric="hamming") +
-    RewardBlock.length_penalty(weight=0.2)
+    RewardBlock.novelty(baseline=["MKTAYIAKQRQISFVKSHFSRQ"], weight=0.5, metric="hamming") +
+    RewardBlock.length_penalty(target_length=23, weight=0.2)
 )
 ```
 

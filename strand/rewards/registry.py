@@ -27,7 +27,7 @@ class RewardRegistry:
         cls._registry[name] = factory
 
     @classmethod
-    def create(cls, name: str, **kwargs):
+    def create(cls, name: str, **kwargs: object) -> object:
         if name not in cls._registry:
             msg = f"Unknown reward block: {name}"
             raise KeyError(msg)

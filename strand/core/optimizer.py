@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import datetime
-from typing import Iterable
 from uuid import uuid4
 
 from strand.core.results import OptimizationResults
@@ -12,8 +11,8 @@ from strand.core.sequence import Sequence
 from strand.manifests import Manifest
 from strand.optimizers import (
     BaseOptimizer,
-    CMAESOptimizer,
     CEMOptimizer,
+    CMAESOptimizer,
     GeneticAlgorithmOptimizer,
     RandomSearchOptimizer,
 )
@@ -73,7 +72,7 @@ class Optimizer:
 
         return score
 
-    def _build_strategy(self, sequences: list[Sequence], score_fn) -> BaseOptimizer:
+    def _build_strategy(self, sequences: list[Sequence], score_fn: Callable[[Sequence], float]) -> BaseOptimizer:
         strategy_map = {
             "cem": CEMOptimizer,
             "cmaes": CMAESOptimizer,
@@ -84,7 +83,7 @@ class Optimizer:
             msg = f"Unsupported optimization method: {self._config.method}"
             raise ValueError(msg)
         strategy_cls = strategy_map[self._config.method]
-        return strategy_cls(
+        return strategy_cls(  # type: ignore[abstract]
             sequences=sequences,
             score_fn=score_fn,
             iterations=self._config.iterations,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Sequence as SeqType
+from collections.abc import Sequence as SeqType
 
 
 def hamming_distance(a: str, b: str) -> int:

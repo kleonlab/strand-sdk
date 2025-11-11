@@ -10,10 +10,8 @@ Welcome to the **Strand SDK** documentation. Strand is a production-ready Python
 
 ## Tutorials
 
-- [Basic Optimization](./tutorial/basic_optimization.md) — Simple example with built-in reward blocks
-- [Custom Reward Functions](./tutorial/custom_rewards.md) — Create domain-specific reward logic
-- [Multi-Objective Optimization](./tutorial/multi_objective.md) — Balance multiple objectives
-- [Protein Stability & Novelty](./tutorial/protein_stability_novelty.md) — Real-world example
+- [Quick Start](./tutorial/quick_start.md) — Run your first optimization in 5 minutes
+- [Core Concepts](./tutorial/core_concepts.md) — Understand Strand's architecture and design patterns
 
 ## API Reference
 
@@ -24,10 +22,12 @@ Welcome to the **Strand SDK** documentation. Strand is a production-ready Python
 
 ## Advanced Topics
 
-- [Export & Reproducibility](./advanced/export_reproducibility.md) — Save and share experiments
-- [Performance Tuning](./advanced/performance.md) — Optimize for speed and accuracy
-- [Cloud Integration](./advanced/cloud_api.md) — Use Strand with cloud APIs
-- [Contributing](../CONTRIBUTING.md) — Help improve Strand
+Coming soon:
+- Advanced optimization techniques
+- Performance tuning and scaling
+- Cloud and distributed computing integration
+
+For now, see [Contributing](../CONTRIBUTING.md) to help improve Strand.
 
 ## FAQ
 
@@ -35,14 +35,7 @@ See [Frequently Asked Questions](./faq.md) for common questions and troubleshoot
 
 ## Examples Repository
 
-Complete examples are available in the [`examples/`](../examples/) directory:
-
-- `basic_optimization.py` — Minimal working example
-- `custom_reward_function.py` — Domain-specific rewards
-- `dna_multi_objective.py` — Multi-objective DNA optimization
-- `protein_stability_novelty.py` — Protein design with stability and novelty
-- `export_and_reproducibility.py` — Manifest and reproducibility
-- `cloud_api_integration.py` — Integration with cloud services
+Complete examples are available in the [`examples/`](../examples/) directory. Browse the directory for runnable code samples demonstrating various Strand SDK features and use cases.
 
 ## Need Help?
 

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
+from collections.abc import Sequence as ABCSequence
 from random import Random
-from typing import Callable, Iterable, Sequence
+from typing import Callable
 
 from strand.core.sequence import Sequence
 
@@ -16,7 +18,7 @@ class BaseOptimizer(ABC):
 
     def __init__(
         self,
-        sequences: Sequence[Sequence],
+        sequences: ABCSequence[Sequence],
         score_fn: ScoreFn,
         iterations: int,
         population_size: int,

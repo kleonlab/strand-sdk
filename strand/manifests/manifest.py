@@ -10,7 +10,7 @@ from typing import Any
 from strand.manifests.serializers import dump_manifest, load_manifest
 
 
-@dataclass(slots=True)
+@dataclass(slots=True)  # type: ignore[call-overload]
 class Manifest:
     run_id: str
     timestamp: datetime
@@ -38,7 +38,7 @@ class Manifest:
         return target
 
     @staticmethod
-    def load(path: str | Path) -> "Manifest":
+    def load(path: str | Path) -> Manifest:
         data = load_manifest(Path(path))
         return Manifest(
             run_id=data["run_id"],

@@ -27,7 +27,7 @@ from strand.rewards import RewardBlock
 # Define reward blocks
 rewards = [
     RewardBlock.stability(weight=1.0),
-    RewardBlock.novelty(weight=0.5, metric="hamming"),
+    RewardBlock.novelty(baseline=["MKTAYIAKQRQISFVKSHFSRQ"], weight=0.5, metric="hamming"),
 ]
 
 # Create and run optimizer

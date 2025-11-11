@@ -7,6 +7,9 @@ import json
 
 from strand.core.optimizer import Optimizer
 from strand.rewards import RewardBlock
+from strand.utils import get_logger
+
+_logger = get_logger("cli")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,7 +36,9 @@ def main(argv: list[str] | None = None) -> int:
         iterations=args.iterations,
     )
     results = optimizer.run()
-    print(json.dumps({"top": [(seq.id, score) for seq, score in results.top(3)]}, indent=2))
+    top_results = {"top": [(seq.id, score) for seq, score in results.top(3)]}
+    _logger.info("Optimization completed. Results: %s", json.dumps(top_results, indent=2))
+    print(json.dumps(top_results, indent=2))  # noqa: T201  # CLI output is expected
     return 0
 
 

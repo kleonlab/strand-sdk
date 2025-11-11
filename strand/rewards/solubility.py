@@ -15,5 +15,4 @@ class SolubilityReward(BaseRewardBlock):
     def _score(self, sequence: Sequence, context: RewardContext) -> float:
         if len(sequence) == 0:
             return 0.0
-        ratio = sum(aa in POLAR for aa in sequence.tokens.upper()) / len(sequence)
-        return ratio
+        return sum(aa in POLAR for aa in sequence.tokens.upper()) / len(sequence)

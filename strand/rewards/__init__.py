@@ -41,7 +41,7 @@ class RewardBlock:
         return CustomReward(fn=fn, name=name, weight=weight)
 
     @staticmethod
-    def from_registry(name: str, **kwargs):
+    def from_registry(name: str, **kwargs: object) -> object:
         return RewardRegistry.create(name, **kwargs)
 
 

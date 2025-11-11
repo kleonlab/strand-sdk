@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from statistics import mean
 
 from strand.core.sequence import Sequence
@@ -16,7 +17,7 @@ class CMAESOptimizer(BaseOptimizer):
             duplicated.extend(population)
         return list(population + duplicated)
 
-    def _score_population(self, population: list[Sequence]):
+    def _score_population(self, population: Iterable[Sequence]) -> list[tuple[Sequence, float]]:
         scored = super()._score_population(population)
         if not scored:
             return scored

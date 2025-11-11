@@ -12,4 +12,5 @@ def dump_manifest(payload: dict[str, Any], path: Path) -> None:
 
 
 def load_manifest(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else {}
