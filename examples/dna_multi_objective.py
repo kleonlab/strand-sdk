@@ -14,4 +14,4 @@ if __name__ == "__main__":
         ),
     ]
     optimizer = Optimizer(sequences=sequences, reward_blocks=rewards, method="ga", iterations=6)
-    print(optimizer.run().top())
+    print(optimizer.run().top())  # noqa: T201

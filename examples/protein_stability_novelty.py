@@ -14,4 +14,4 @@ if __name__ == "__main__":
         RewardBlock.novelty(baseline=baseline, metric="levenshtein", weight=0.3),
     ]
     optimizer = Optimizer(sequences=sequences, reward_blocks=rewards, method="cmaes", iterations=8)
-    print(optimizer.run().top())
+    print(optimizer.run().top())  # noqa: T201
