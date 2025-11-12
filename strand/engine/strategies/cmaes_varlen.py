@@ -1,7 +1,9 @@
-"""CMA-ES Strategy for continuous and discrete optimization.
+"""Variable-Length CMA-ES Strategy for sequences with dynamic length.
 
-Uses the PyCMA library (Covariance Matrix Adaptation Evolution Strategy).
-For sequences, we discretize the continuous output by rounding to nearest alphabet token.
+Extends CMA-ES to handle sequences where length varies within [min_len, max_len].
+Uses a continuous encoding where:
+- First dimension: sequence length (scaled to [0, 1])
+- Remaining dimensions: token probabilities
 """
 
 from __future__ import annotations
@@ -19,11 +21,8 @@ from strand.engine.types import Metrics
 
 
 @dataclass
-class CMAESStrategy(Strategy):
-    """CMA-ES optimization strategy (continuous, then discretized for sequences).
-
-    Uses the reference CMA-ES implementation from PyCMA. For biological sequences,
-    we discretize the continuous output by mapping to the nearest alphabet token.
+class CMAESVarLenStrategy(Strategy):
+    """CMA-ES with variable-length sequences.
 
     Parameters
     ----------
@@ -49,7 +48,6 @@ class CMAESStrategy(Strategy):
     cma_params: dict[str, object] = field(default_factory=dict)
 
     # Internal state
-    _fixed_len: int = field(init=False, repr=False)
     _es: cma.CMAEvolutionStrategy | None = field(default=None, init=False, repr=False)
     _last_solutions: list[list[float]] | None = field(default=None, init=False, repr=False)
     _best_sequence: Sequence | None = field(default=None, init=False, repr=False)
@@ -63,33 +61,64 @@ class CMAESStrategy(Strategy):
             raise ValueError("alphabet must be non-empty")
         if self.min_len <= 0 or self.max_len < self.min_len:
             raise ValueError("invalid length band")
-        self._fixed_len = (self.min_len + self.max_len) // 2
 
-    def _discretize(self, continuous: list[float]) -> Sequence:
-        """Convert continuous values to discrete sequence.
+    def _decode_sequence(self, continuous: list[float]) -> Sequence:
+        """Decode continuous vector to variable-length sequence.
 
-        Map each continuous value to nearest alphabet token by:
-        1. Scaling continuous values to [0, len(alphabet)-1]
-        2. Rounding to nearest integer
-        3. Looking up token in alphabet
+        Parameters
+        ----------
+        continuous : list[float]
+            Continuous vector where:
+            - continuous[0]: length (scaled to [0, 1], maps to [min_len, max_len])
+            - continuous[1:]: token indices (scaled to [0, len(alphabet)-1])
+
+        Returns
+        -------
+        Sequence
+            Variable-length sequence.
         """
-        tokens = []
-        for val in continuous:
-            # Scale to alphabet range
-            scaled = (val + 1) / 2 * (len(self.alphabet) - 1)  # Assume val in [-1, 1]
-            # Clamp and round
-            idx = max(0, min(len(self.alphabet) - 1, round(scaled)))
-            tokens.append(self.alphabet[int(idx)])
+        if len(continuous) < 1:
+            raise ValueError("continuous vector must have at least 1 dimension")
 
-        seq_str = "".join(tokens[: self._fixed_len])
-        return Sequence(id=f"cmaes_{self._counter}", tokens=seq_str)
+        # Decode length from first dimension
+        length_scaled = (continuous[0] + 1) / 2  # Scale from [-1, 1] to [0, 1]
+        length = int(length_scaled * (self.max_len - self.min_len) + self.min_len)
+        length = max(self.min_len, min(self.max_len, length))
+
+        # Decode tokens from remaining dimensions
+        tokens = []
+        for i in range(length):
+            # Use circular indexing if not enough dimensions
+            idx = (i + 1) % len(continuous)
+            val = continuous[idx]
+
+            # Scale to alphabet range
+            scaled = (val + 1) / 2 * (len(self.alphabet) - 1)
+            token_idx = max(0, min(len(self.alphabet) - 1, round(scaled)))
+            tokens.append(self.alphabet[int(token_idx)])
+
+        seq_str = "".join(tokens)
+        return Sequence(id=f"cmaes_varlen_{self._counter}", tokens=seq_str)
 
     def ask(self, n: int) -> list[Sequence]:
-        """Return n candidate sequences sampled from the CMA-ES distribution."""
+        """Return n candidate sequences sampled from the CMA-ES distribution.
+
+        Parameters
+        ----------
+        n : int
+            Number of candidates to generate.
+
+        Returns
+        -------
+        list[Sequence]
+            Variable-length sequences.
+        """
         # Initialize ES on first call
         if self._es is None:
-            # Start from random point
-            x0 = [0.0] * self._fixed_len
+            # Dimension: 1 (length) + max_len (tokens)
+            # But we can optimize with fewer dimensions
+            dim = 1 + self.max_len  # Full dimension
+            x0 = [0.0] * dim
             params = {
                 "seed": self.seed,
                 "maxiter": 1000,
@@ -101,11 +130,11 @@ class CMAESStrategy(Strategy):
         # Ask ES for solutions
         X = self._es.ask(number=n)
 
-        # Discretize to sequences and store for tell()
+        # Decode to sequences and store for tell()
         self._last_solutions = X
         sequences = []
         for x in X:
-            seq = self._discretize(x)
+            seq = self._decode_sequence(x)
             self._counter += 1
             sequences.append(seq)
 
@@ -128,23 +157,34 @@ class CMAESStrategy(Strategy):
                 self._best_score = score
                 self._best_sequence = seq
 
-        # Extract scores for ES (negate for minimization if needed)
+        # Extract scores for ES (negate for minimization)
         scores = [score for _, score, _ in items]
 
         # Tell ES - CMA-ES minimizes by default, so negate scores
         self._es.tell(self._last_solutions, [-s for s in scores])
 
     def best(self) -> tuple[Sequence, float] | None:
-        """Return the best sequence observed so far."""
+        """Return the best sequence observed so far.
+
+        Returns
+        -------
+        tuple[Sequence, float] | None
+            (best_sequence, best_score) or None if no sequences evaluated yet.
+        """
         if self._best_sequence is None:
             return None
         return (self._best_sequence, self._best_score)
 
     def state(self) -> Mapping[str, object]:
-        """Return serializable strategy state."""
+        """Return serializable strategy state.
+
+        Returns
+        -------
+        Mapping[str, object]
+            Strategy state snapshot.
+        """
         if self._es is None:
             return {}
-        # CMA-ES state is complex; return basic info
         return {
             "best_score": self._best_score,
             "iterations": self._es.countiter if hasattr(self._es, "countiter") else 0,

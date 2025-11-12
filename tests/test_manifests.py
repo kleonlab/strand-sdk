@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from strand.manifests import Manifest
 
@@ -6,7 +6,7 @@ from strand.manifests import Manifest
 def test_manifest_save_and_load(tmp_path):
     manifest = Manifest(
         run_id="run-1",
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(UTC),
         experiment="exp",
         inputs={"sequences": []},
         optimizer={"method": "cem"},
