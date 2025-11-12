@@ -10,6 +10,7 @@ from typing import Final
 from strand.engine.interfaces import Strategy
 from strand.engine.strategies.cem import CEMStrategy
 from strand.engine.strategies.cmaes import CMAESStrategy
+from strand.engine.strategies.cmaes_varlen import CMAESVarLenStrategy
 from strand.engine.strategies.ga import GAStrategy
 from strand.engine.strategies.random import RandomStrategy
 
@@ -18,6 +19,7 @@ _REGISTRY: Final[dict[str, type[Strategy]]] = {
     "cem": CEMStrategy,
     "ga": GAStrategy,
     "cmaes": CMAESStrategy,
+    "cmaes-varlen": CMAESVarLenStrategy,
 }
 
 
@@ -29,7 +31,7 @@ def strategy_from_name(name: str, **params: object) -> Strategy:
     Parameters
     ----------
     name : str
-        Strategy name: "random", "cem", "ga", "cmaes"
+        Strategy name: "random", "cem", "ga", "cmaes", "cmaes-varlen"
     **params : object
         Constructor parameters (e.g., alphabet, min_len, max_len, seed)
 
@@ -45,5 +47,12 @@ def strategy_from_name(name: str, **params: object) -> Strategy:
     return cls(**params)  # type: ignore[call-arg]
 
 
-__all__ = ["strategy_from_name", "RandomStrategy", "CEMStrategy", "GAStrategy", "CMAESStrategy"]
+__all__ = [
+    "strategy_from_name",
+    "RandomStrategy",
+    "CEMStrategy",
+    "GAStrategy",
+    "CMAESStrategy",
+    "CMAESVarLenStrategy",
+]
 
