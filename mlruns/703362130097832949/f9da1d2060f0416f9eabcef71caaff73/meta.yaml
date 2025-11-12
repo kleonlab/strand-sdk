@@ -1,0 +1,14 @@
+artifact_uri: /Users/sethmorton/Desktop/codingplayground/strand-sdk/mlruns/703362130097832949/f9da1d2060f0416f9eabcef71caaff73/artifacts
+end_time: 1762930850757
+entry_point_name: ''
+experiment_id: '703362130097832949'
+lifecycle_stage: active
+run_id: f9da1d2060f0416f9eabcef71caaff73
+run_name: cmaes_optimization
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1762930834340
+status: 3
+tags: []
+user_id: sethmorton

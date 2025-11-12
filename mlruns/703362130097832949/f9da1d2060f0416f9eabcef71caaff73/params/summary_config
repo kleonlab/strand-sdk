@@ -1,0 +1,1 @@
+{'iterations': 10, 'population_size': 32, 'seed': 42, 'timeout_s': 60.0, 'early_stop_patience': 10, 'max_evals': None, 'method': 'cmaes'}
