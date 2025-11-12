@@ -1,0 +1,121 @@
+"""Local pool executor for parallel evaluation.
+
+Uses threads or processes to evaluate batches via an Evaluator while preserving
+input order. This is a drop-in alternative to the sequential LocalExecutor.
+"""
+
+from __future__ import annotations
+
+import time
+from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from typing import ClassVar, Literal
+
+from strand.core.sequence import Sequence
+from strand.engine.interfaces import Evaluator
+from strand.engine.types import Metrics
+
+
+def _chunks(seq: list[Sequence], size: int) -> list[list[Sequence]]:
+    return [seq[i : i + size] for i in range(0, len(seq), size)]
+
+
+@dataclass(slots=True)
+class LocalPoolExecutor:
+    """Parallel executor that preserves input order.
+
+    Parameters
+    ----------
+    evaluator:
+        Pure evaluator to call in worker threads/processes.
+    mode:
+        "auto" (default), "thread", or "process".
+    num_workers:
+        Number of workers. If 0 or "auto", an implementation-defined default is used.
+    batch_size:
+        Mini-batch size for evaluator.evaluate_batch.
+    """
+
+    evaluator: Evaluator
+    mode: Literal["auto", "thread", "process"] = "auto"
+    num_workers: int | Literal["auto"] = "auto"
+    batch_size: int = 64
+
+    _THREADS_DEFAULT: ClassVar[int] = 4
+
+    def prepare(self) -> None:
+        """No-op for now; hook for model warmup in workers."""
+
+    def run(
+        self,
+        seqs: list[Sequence],
+        *,
+        timeout_s: float | None = None,
+        batch_size: int | None = None,
+    ) -> list[Metrics]:
+        """Evaluate sequences in parallel and preserve input order."""
+        if not seqs:
+            return []
+
+        effective_batch = batch_size or self.batch_size
+        batches = _chunks(seqs, effective_batch)
+
+        # Select executor type and size
+        mode = self.mode
+        if mode == "auto":
+            # Default to threads; switch to processes later if needed
+            mode = "thread"
+
+        max_workers = None
+        if self.num_workers == "auto" or self.num_workers == 0:
+            max_workers = self._THREADS_DEFAULT
+        else:
+            max_workers = max(1, int(self.num_workers))
+
+        deadline = None if timeout_s is None else time.perf_counter() + timeout_s
+
+        # Submit batches preserving order by tracking futures with their index
+        results: list[list[Metrics]] = [None] * len(batches)  # type: ignore[list-item]
+
+        def _evaluate(batch: list[Sequence]) -> list[Metrics]:
+            return self.evaluator.evaluate_batch(batch)
+
+        ExecutorCls = ThreadPoolExecutor if mode == "thread" else ProcessPoolExecutor
+        with ExecutorCls(max_workers=max_workers) as pool:
+            futures: list[Future] = []
+            for idx, batch in enumerate(batches):
+                futures.append(pool.submit(_evaluate, batch))
+
+            # Consume futures in submission order to preserve overall ordering
+            for idx, fut in enumerate(futures):
+                remaining = None
+                if deadline is not None:
+                    remaining = max(0.0, deadline - time.perf_counter())
+                try:
+                    batch_results = fut.result(timeout=remaining)
+                except Exception as exc:  # includes TimeoutError
+                    # Propagate TimeoutError to the engine so it can account for timeouts
+                    if isinstance(exc, TimeoutError):
+                        raise
+                    # For other errors, wrap into a RuntimeError to signal executor failure
+                    raise RuntimeError("Worker task failed") from exc
+
+                if len(batch_results) != len(batches[idx]):
+                    raise RuntimeError(
+                        "Evaluator returned mismatched batch size: "
+                        f"expected {len(batches[idx])} got {len(batch_results)}"
+                    )
+                results[idx] = batch_results
+
+        # Flatten in original order
+        flat: list[Metrics] = []
+        for r in results:
+            # Safety: should not be None; if so, raise
+            if r is None:  # type: ignore[unreachable]
+                raise RuntimeError("Missing batch result")
+            flat.extend(r)
+        return flat
+
+    def close(self) -> None:
+        """Hook for cleanup work (unused)."""
+
