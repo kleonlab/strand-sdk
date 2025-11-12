@@ -74,7 +74,7 @@ models = [
     "torch>=2.0.0",
     "biotite>=0.40.0",
     "biopython>=1.81",
-    "JASPAR2024>=1.2",
+    "pyJASPAR>=1.2.0",
 ]
 
 rl-training = [
@@ -83,7 +83,7 @@ rl-training = [
     "transformers>=4.35.0",
     "tokenizers>=0.14.0",
     "biopython>=1.81",
-    "JASPAR2024>=1.2",
+    "pyJASPAR>=1.2.0",
     "requests>=2.31.0",
     "filelock>=3.13.0",
 ]

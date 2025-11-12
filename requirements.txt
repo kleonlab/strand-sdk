@@ -23,7 +23,7 @@ tokenizers>=0.14.0
 
 # Bioinformatics
 biopython>=1.81
-JASPAR2024>=1.2
+pyJASPAR>=1.2.0  # JASPAR motif database access
 
 # Utilities
 requests>=2.31.0
