@@ -7,7 +7,7 @@ input order. This is a drop-in alternative to the sequential LocalExecutor.
 from __future__ import annotations
 
 import time
-from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from concurrent.futures import Future, ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import ClassVar, Literal
 
@@ -82,8 +82,14 @@ class LocalPoolExecutor:
         futures: list[Future] = []
         shutdown_wait = True
         try:
-            for idx, batch in enumerate(batches):
-                futures.append(pool.submit(self.evaluator.evaluate_batch, batch))
+            try:
+                for batch in batches:
+                    futures.append(pool.submit(self.evaluator.evaluate_batch, batch))
+            except BaseException:
+                shutdown_wait = False
+                for pending in futures:
+                    pending.cancel()
+                raise
 
             # Consume futures in submission order to preserve overall ordering
             for idx, fut in enumerate(futures):
@@ -98,11 +104,20 @@ class LocalPoolExecutor:
                         pending.cancel()
                     raise
                 except Exception as exc:
+                    shutdown_wait = False
                     for pending in futures[idx + 1 :]:
                         pending.cancel()
                     raise RuntimeError("Worker task failed") from exc
+                except BaseException:
+                    shutdown_wait = False
+                    for pending in futures[idx + 1 :]:
+                        pending.cancel()
+                    raise
 
                 if len(batch_results) != len(batches[idx]):
+                    shutdown_wait = False
+                    for pending in futures[idx + 1 :]:
+                        pending.cancel()
                     raise RuntimeError(
                         "Evaluator returned mismatched batch size: "
                         f"expected {len(batches[idx])} got {len(batch_results)}"
