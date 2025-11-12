@@ -99,7 +99,7 @@ class TestCMAESVarLenStrategy:
         )
 
         best_scores = []
-        for gen in range(5):
+        for _gen in range(5):
             sequences = strategy.ask(16)
             # Simple scoring: prefer longer sequences
             items = [(seq, len(seq.tokens) / 12.0, None) for seq in sequences]

@@ -20,13 +20,20 @@ Implementation:
 
 from __future__ import annotations
 
+import math
+import random
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-import random
+from typing import ClassVar, cast
+
+import torch
+import torch.nn as nn
+from torch.optim import Optimizer
 
 from strand.core.sequence import Sequence
 from strand.engine.interfaces import Strategy
+from strand.engine.runtime import ModelRuntime, StrategyCaps, StrategyContext
 from strand.engine.types import Metrics
 
 
@@ -35,7 +42,7 @@ class RLPolicyStrategy(Strategy):
     """Constrained RL policy-based strategy (Ctrl-DNA style).
 
     Learns token preferences at each position based on reward signals.
-    Supports both unconstrained (maximize reward) and constrained 
+    Supports both unconstrained (maximize reward) and constrained
     (maximize reward subject to constraints) optimization.
 
     Parameters
@@ -51,7 +58,7 @@ class RLPolicyStrategy(Strategy):
     learning_rate : float
         Learning rate for policy updates (alpha). Typical: 0.05-0.2
     temperature : float
-        Temperature for softmax exploration (tau). 
+        Temperature for softmax exploration (tau).
         Higher = more exploration. Typically annealed over time.
     constraint_penalty : float
         Penalty coefficient for constraint violations.
@@ -65,6 +72,8 @@ class RLPolicyStrategy(Strategy):
     learning_rate: float = 0.1
     temperature: float = 1.0
     constraint_penalty: float = 1.0  # Lagrange multiplier for constraints
+
+    _CAPS: ClassVar[StrategyCaps] = StrategyCaps(supports_fine_tuning=True)
 
     # Internal state
     _rng: random.Random = field(default_factory=random.Random, init=False, repr=False)
@@ -81,6 +90,10 @@ class RLPolicyStrategy(Strategy):
         default_factory=lambda: defaultdict(int), init=False, repr=False
     )
     _episode_count: int = field(default=0, init=False, repr=False)
+    _token_index: dict[str, int] = field(default_factory=dict, init=False, repr=False)
+    _runtime: ModelRuntime | None = field(default=None, init=False, repr=False)
+    _policy_module: _AutoregressivePolicy | None = field(default=None, init=False, repr=False)
+    _optimizer: Optimizer | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize policy state."""
@@ -93,10 +106,20 @@ class RLPolicyStrategy(Strategy):
         # Initialize Q-values uniformly
         self._q_values = defaultdict(float)
         self._visit_counts = defaultdict(int)
+        self._token_index = {token: idx for idx, token in enumerate(self.alphabet)}
+
+    def strategy_caps(self) -> StrategyCaps:
+        return self._CAPS
 
     def _sample_length(self) -> int:
         """Sample sequence length from current policy."""
         return self._rng.randint(self.min_len, self.max_len)
+
+    def prepare(self, context: StrategyContext) -> None:
+        self._runtime = context.runtime
+        if self._runtime is None:
+            return
+        self._ensure_torch_policy()
 
     def _get_token_probabilities(self, position: int) -> list[float]:
         """Get softmax probabilities for tokens at a position.
@@ -114,6 +137,11 @@ class RLPolicyStrategy(Strategy):
         list[float]
             Probabilities for each token.
         """
+        if self._policy_module is not None:
+            logits = self._policy_module.logits[position]
+            probs_tensor = torch.softmax(logits / max(self.temperature, 1e-6), dim=-1)
+            return probs_tensor.detach().cpu().tolist()
+
         # Get Q-values for all tokens
         q_vals = []
         for token in self.alphabet:
@@ -149,8 +177,7 @@ class RLPolicyStrategy(Strategy):
             Sampled token.
         """
         probs = self._get_token_probabilities(position)
-        token = self._rng.choices(self.alphabet, weights=probs, k=1)[0]
-        return token
+        return self._rng.choices(self.alphabet, weights=probs, k=1)[0]
 
     def ask(self, n: int) -> list[Sequence]:
         """Generate n sequences using current policy.
@@ -184,12 +211,12 @@ class RLPolicyStrategy(Strategy):
         """Update policy based on rewards (Ctrl-DNA constrained RL).
 
         Implements policy gradient update with constraint penalties:
-        
+
         Objective = reward - constraint_penalty * constraint_violation
-        
+
         Each token's Q-value updated proportional to advantage:
         Q(pos, token) ← Q(pos, token) + alpha * (R - baseline)
-        
+
         where baseline is the average reward at that position (variance reduction).
 
         Parameters
@@ -210,30 +237,18 @@ class RLPolicyStrategy(Strategy):
         # (inspired by Actor-Critic methods used in Ctrl-DNA)
         for seq, score, metrics in items:
             tokens = seq.tokens
-            
+
             # Apply constraint penalty if metrics contain constraint violations
             effective_reward = score
             if metrics and metrics.constraints:
                 total_violation = sum(metrics.constraints.values())
                 effective_reward = score - self.constraint_penalty * total_violation
-            
-            # Update value baseline for this sequence length
-            seq_len = len(tokens)
-            current_baseline = self._value_baseline[seq_len]
-            new_baseline = current_baseline + 0.01 * (effective_reward - current_baseline)
-            self._value_baseline[seq_len] = new_baseline
-            
-            # Compute advantage (reward - baseline)
-            advantage = effective_reward - self._value_baseline[seq_len]
-            
-            # Policy gradient update: Q(pos, token) += alpha * advantage
-            for pos, token in enumerate(tokens):
-                key = (pos, token)
-                current_q = self._q_values[key]
-                new_q = current_q + self.learning_rate * advantage
-                self._q_values[key] = new_q
-                self._visit_counts[key] += 1
-        
+
+            advantage = self._update_baseline(len(tokens), effective_reward)
+
+            if self._policy_module is None:
+                self._update_bandit_values(tokens, advantage)
+
         self._episode_count += 1
 
     def best(self) -> tuple[Sequence, float] | None:
@@ -262,6 +277,66 @@ class RLPolicyStrategy(Strategy):
             "learning_rate": self.learning_rate,
             "temperature": self.temperature,
         }
+
+    def train_step(
+        self,
+        items: list[tuple[Sequence, float, Metrics]],
+        context: StrategyContext,
+    ) -> None:
+        if not items:
+            return
+        runtime = context.runtime
+        if runtime is None:
+            return
+
+        self._runtime = runtime
+        self._ensure_torch_policy()
+        if self._policy_module is None:
+            return
+
+        optimizer = self._optimizer
+        if optimizer is None:
+            optimizer = torch.optim.Adam(self._policy_module.parameters(), lr=self.learning_rate)
+            _, optimizer = runtime.prepare_module(self._policy_module, optimizer)
+            if optimizer is None:
+                return
+            self._optimizer = optimizer
+
+        train_limit = context.batch.train_size or len(items)
+        selected = items[:train_limit]
+        device = self._policy_module.device
+        optimizer.zero_grad(set_to_none=True)
+
+        denom = 0
+        temperature = max(self.temperature, 1e-6)
+
+        with runtime.autocast():
+            loss = torch.zeros((), device=device)
+            for seq, score, _ in selected:
+                if not math.isfinite(score):
+                    continue
+                token_ids = self._encode_tokens(seq.tokens)
+                if not token_ids:
+                    continue
+
+                logits = self._policy_module.logits[: len(token_ids)]
+                log_probs = torch.log_softmax(logits / temperature, dim=-1)
+                positions = torch.arange(len(token_ids), device=device)
+                idx_tensor = torch.tensor(token_ids, device=device, dtype=torch.long)
+                seq_log_prob = log_probs[positions, idx_tensor].sum()
+                weight = torch.tensor(score, device=device, dtype=log_probs.dtype)
+                loss = loss - weight * seq_log_prob
+                denom += 1
+
+            if denom == 0:
+                optimizer.zero_grad(set_to_none=True)
+                return
+
+            loss = loss / denom
+
+        runtime.backward(loss)
+        optimizer.step()
+        optimizer.zero_grad(set_to_none=True)
 
     def get_policy_entropy(self) -> float:
         """Compute entropy of current policy.
@@ -297,6 +372,48 @@ class RLPolicyStrategy(Strategy):
             raise ValueError("temperature must be positive")
         self.temperature = temperature
 
+    def _ensure_torch_policy(self) -> None:
+        if self._runtime is None or self._policy_module is not None:
+            return
+        module = _AutoregressivePolicy(self.max_len, len(self.alphabet))
+        optimizer = torch.optim.Adam(module.parameters(), lr=self.learning_rate)
+        prepared_module, prepared_optimizer = self._runtime.prepare_module(module, optimizer)
+        self._policy_module = cast(_AutoregressivePolicy, prepared_module)
+        self._optimizer = prepared_optimizer
+
+    def _encode_tokens(self, tokens: str) -> list[int]:
+        indices: list[int] = []
+        for char in tokens:
+            idx = self._token_index.get(char)
+            if idx is None:
+                return []
+            indices.append(idx)
+        return indices
+
+    def _update_baseline(self, seq_len: int, reward: float) -> float:
+        current_baseline = self._value_baseline[seq_len]
+        new_baseline = current_baseline + 0.01 * (reward - current_baseline)
+        self._value_baseline[seq_len] = new_baseline
+        return reward - self._value_baseline[seq_len]
+
+    def _update_bandit_values(self, tokens: str, advantage: float) -> None:
+        for pos, token in enumerate(tokens):
+            key = (pos, token)
+            current_q = self._q_values[key]
+            new_q = current_q + self.learning_rate * advantage
+            self._q_values[key] = new_q
+            self._visit_counts[key] += 1
+
+
+class _AutoregressivePolicy(nn.Module):
+    def __init__(self, max_len: int, alphabet_size: int) -> None:
+        super().__init__()
+        self.logits = nn.Parameter(torch.zeros(max_len, alphabet_size))
+
+    @property
+    def device(self) -> torch.device:
+        return self.logits.device
+
 
 def exp(x: float) -> float:
     """Numerically stable exponential."""
@@ -304,7 +421,6 @@ def exp(x: float) -> float:
 
     if x > 100:
         return 1e50
-    elif x < -100:
+    if x < -100:
         return 0.0
     return math.exp(x)
-
