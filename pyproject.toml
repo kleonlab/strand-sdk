@@ -108,6 +108,15 @@ docs = [
     "mkdocstrings[python]>=0.20.0",
 ]
 
+variant-triage = [
+    "enformer-pytorch>=0.1.0",
+    "pyjaspar>=3.0.0",
+    "MOODS-python>=1.9.4",
+    "pyBigWig>=0.3.21",
+    "pysam>=0.23.0",
+    "PyRanges>=0.13.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/sethmorton/strand-sdk"
 Documentation = "https://github.com/sethmorton/strand-sdk/tree/main/docs"
