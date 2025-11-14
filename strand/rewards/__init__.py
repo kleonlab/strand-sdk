@@ -100,4 +100,6 @@ class RewardBlock:
         return RewardRegistry.create(name, **kwargs)
 
 
+
 __all__ = ["RewardBlock", "RewardRegistry"]
+

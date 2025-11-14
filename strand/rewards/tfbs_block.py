@@ -77,6 +77,9 @@ class TFBSFrequencyCorrelationBlock(RewardBlock):
         self.motifs = self._load_motifs()
         self.pwm_scores_cache = {}
 
+        self.max_scores = {name: np.sum(np.log(pwm / 0.25 + 1e-8) * (pwm == pwm.max(axis=1, keepdims=True)))
+                   for name, pwm in self.motifs.items()}
+
     def _load_motifs(self) -> dict[str, np.ndarray]:
         """Load JASPAR motifs.
 
@@ -232,8 +235,10 @@ class TFBSFrequencyCorrelationBlock(RewardBlock):
             scores = self._scan_pwm(seq, pwm)
 
             # Count hits above threshold
-            hits = np.sum(scores >= self.config.threshold)
-            freq = hits / len(seq) if len(seq) > 0 else 0.0
+            #hits = np.sum(scores >= self.config.threshold)
+            #freq = hits / len(seq) if len(seq) > 0 else 0.0
+            total_strength = np.sum(scores[scores >= self.config.threshold])
+            freq = total_strength / (len(seq) - len(pwm) + 1)
 
             frequencies.append(freq)
 
@@ -273,6 +278,32 @@ class TFBSFrequencyCorrelationBlock(RewardBlock):
 
         return scores
 
+    def _scan_pwm_log_odds(self, seq: str, pwm: np.ndarray, background: np.ndarray = None) -> np.ndarray:
+        if background is None:
+            background = np.array([0.25, 0.25, 0.25, 0.25])  # uniform
+        log_pwm = np.log(pwm / background.reshape(1, 4) + 1e-8)
+        
+        seq_encoded = np.zeros((len(seq), 4))
+        alphabet = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 0}
+        for i, base in enumerate(seq.upper()):
+            seq_encoded[i, alphabet.get(base, 0)] = 1.0
+
+        motif_len = pwm.shape[0]
+        scores = np.zeros(len(seq) - motif_len + 1)
+        for i in range(len(seq) - motif_len + 1):
+            window = seq_encoded[i:i + motif_len]
+            scores[i] = np.sum(window * log_pwm)
+        return scores
+
+    def _scan_both_strands(self, seq: str, pwm: np.ndarray) -> np.ndarray:
+        rev_seq = str(Seq(seq).reverse_complement())
+        fwd_scores = self._scan_pwm(seq, pwm)
+        rev_scores = self._scan_pwm(rev_seq, pwm)
+        # Align reverse scores to forward coordinate
+        aligned_rev = np.zeros(len(seq) - len(pwm) + 1)
+        for i, score in enumerate(rev_scores):
+            aligned_rev[len(seq) - len(pwm) - i] = score
+        return np.maximum(fwd_scores, aligned_rev)
 
 __all__ = [
     "TFBSConfig",
