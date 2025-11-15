@@ -86,13 +86,7 @@ def _(Path):
     # Ensure directories exist
     for d in [DATA_RAW_DIR, VARIANTS_DIR, ANNOTATIONS_DIR, FEATURES_DIR]:
         d.mkdir(parents=True, exist_ok=True)
-    return (
-        ANNOTATIONS_DIR,
-        CAMPAIGN_ROOT,
-        DATA_RAW_DIR,
-        FULL_CAMPAIGN_ROOT,
-        VARIANTS_DIR,
-    )
+    return ANNOTATIONS_DIR, DATA_RAW_DIR, FULL_CAMPAIGN_ROOT, VARIANTS_DIR
 
 
 @app.cell
@@ -345,7 +339,7 @@ def _(mo):
 @app.cell
 def _(
     ANNOTATIONS_DIR,
-    CAMPAIGN_ROOT,
+    FULL_CAMPAIGN_ROOT,
     VARIANTS_DIR,
     df_variants_filtered,
     logger,
@@ -358,7 +352,7 @@ def _(
     This cell invokes VEP and pyensembl APIs for real transcript/consequence annotations
     rather than using placeholder values.
     """
-    sys.path.insert(0, str(CAMPAIGN_ROOT))
+    sys.path.insert(0, str(FULL_CAMPAIGN_ROOT))
     from src.annotation.annotate_transcripts import VariantAnnotator
 
     annotation_source = "unknown"
